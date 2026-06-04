@@ -41,3 +41,7 @@ Thumbs.db
 # Temporarios
 tomcat-temp/
 work/
+
+
+#MDS
+.md
