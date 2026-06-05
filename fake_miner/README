@@ -1,66 +1,38 @@
-# FakeMiner — Hardware Monitor & Fake Mining Simulator
+# FakeMiner — Backend (Spring Boot)
 
-## O que é esse projeto?
+O **FakeMiner Backend** é o coração do ecossistema FakeMiner, um simulador de mineração fictícia focado em **observabilidade e monitoramento de hardware** em tempo real. Este projeto é estritamente **educacional** e não realiza mineração real de criptomoedas.
 
-Projeto de estudo e portfólio focado em **observabilidade,
-automação e monitoramento de hardware**,
-inspirado nos problemas reais da mineração de criptomoedas.
+O backend é responsável por:
+- Coletar métricas reais de hardware (CPU, RAM, Temperaturas) via OSHI.
+- Gerenciar o estado de uma operação de mineração simulada.
+- Orquestrar alertas críticos através de uma máquina de estados complexa.
+- Notificar usuários via bot do Telegram e disponibilizar dados via API REST.
 
-A ideia **não é criar um minerador real**, mas sim um sistema simulador que:
-- Gera métricas fictícias de mineração (hash rate, lucro, metas)
-- Monitora métricas **reais** da máquina em tempo real (CPU, RAM, frequência)
-- Envia alertas inteligentes via **Telegram Bot**
-- Expõe tudo num **Dashboard Web** com gráficos em tempo real
+---
 
-> Motivação: mineração real tem problemas como superaquecimento,
-desgaste de hardware, travamentos e necessidade de observabilidade constante.
-Esse projeto resolve isso com engenharia de software, não com mineração de verdade.
+## O que esse projeto demonstra
+
+Este repositório demonstra a aplicação de diversas tecnologias e padrões de arquitetura modernos:
+
+- **Java 24 & Spring Boot 4.0.6**: Uso das versões mais recentes da stack Java para máxima performance e recursos modernos.
+- **Observabilidade**: Coleta de métricas reais do sistema operacional utilizando a biblioteca **OSHI**.
+- **Máquina de Estados de Alerta**: Gerenciamento sofisticado de estados críticos (`NORMAL → ALERTA_1 → VIGILANCIA → ALERTA_2 → ALERTA_3 → DESLIGADO`).
+- **Automação de Mensageria**: Integração profunda com **Telegram Bot API** para controle remoto e notificações push.
+- **Arquitetura REST**: Design de API limpo, versionado e seguindo as melhores práticas.
+- **Spring Scheduler**: Execução de tarefas em segundo plano para coleta de métricas e processamento de regras de negócio.
+- **Simulação de Negócio**: Lógica de mineração fictícia (hashrate, lucro, dificuldade) para contextualizar o monitoramento.
 
 ---
 
 ## Stack Tecnológica
 
-### Backend
-- **Java 24** com **Spring Boot 4.0.6**
-- **Apache Kafka** — streaming de eventos (planejado)
-- **Redis** — cache, cooldown de alertas, rate limiting, estado da máquina (planejado)
-- **WebSocket** — comunicação em tempo real com o frontend
-- **Spring Scheduler** — coleta de métricas a cada 5 segundos
-- **OSHI 6.6.1** — coleta de métricas reais de hardware (CPU, RAM, frequência)
-- **TelegramBots 6.7.0** — bot de monitoramento e controle remoto
-
-### Frontend Mobile
-- **Flutter** com **BLoC** para gerenciamento de estado
-- **fl_chart** para gráficos em tempo real
-- **http** para consumo da API REST
-- Tema dark com paleta verde esmeralda `#50C878`
-
-### Frontend Web (planejado)
-- Angular
-
-### Infraestrutura
-- Kafka e Redis instalados **nativamente no Windows** (sem Docker/WSL — decisão intencional por compatibilidade)
-- Docker planejado para fases futuras
-
----
-
-## Dependências Maven (pom.xml)
-
-```xml
-<!-- OSHI - Monitor de hardware -->
-<dependency>
-    <groupId>com.github.oshi</groupId>
-    <artifactId>oshi-core</artifactId>
-    <version>6.6.1</version>
-</dependency>
-
-<!-- Telegram Bot -->
-<dependency>
-    <groupId>org.telegram</groupId>
-    <artifactId>telegrambots</artifactId>
-    <version>6.7.0</version>
-</dependency>
-```
+- **Java 24**
+- **Spring Boot 4.0.6**
+- **OSHI 6.6.1** (Coleta de hardware)
+- **TelegramBots 6.7.0** (Integração com Telegram)
+- **Spring Dotenv 4.0.0** (Gestão de segredos e variáveis de ambiente)
+- **Apache Kafka** (Planejado)
+- **Redis** (Planejado)
 
 ---
 
@@ -70,179 +42,45 @@ Base URL: `http://<ip>:8080/api/v1`
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| GET | `/metricas` | Retorna snapshot completo — hardware + minerador |
-| GET | `/metricas/hardware` | Retorna apenas métricas de hardware |
-| GET | `/metricas/minerador` | Retorna apenas status do minerador |
-| POST | `/minerador/alternar` | Liga ou desliga o minerador |
-
-### Exemplo de resposta — `GET /metricas`
-```json
-{
-  "hardware": {
-    "temperaturaCpu": 58.4,
-    "usoCpu": 37.3,
-    "frequenciaCpuGhz": 3.593,
-    "memoriaUsadaGb": 10.39,
-    "memoriaTotalGb": 15.94,
-    "percentualMemoriaUsada": 65.17,
-    "swapUsadaGb": 0.14,
-    "uptimeSegundos": 592548
-  },
-  "mineracao": {
-    "ativo": true,
-    "hashRateAtual": 48.54,
-    "hashRateMedio": 50.0,
-    "consumoWatts": 127.71,
-    "lucroEstimadoDolar": 0.06997,
-    "progressoMetaDiaria": 1.39,
-    "eficiencia": 0.38,
-    "inicioSessao": "2026-05-09T23:11:55"
-  }
-}
-```
+| GET | `/metricas` | Snapshot completo do sistema (Hardware + Minerador) |
+| GET | `/metricas/hardware` | Retorna apenas métricas reais de hardware |
+| GET | `/metricas/minerador` | Retorna o status e performance do minerador simulado |
+| POST | `/minerador/alternar` | Ativa ou desativa o processo de mineração fictícia |
+| GET | `/alertas` | Histórico completo de alertas e eventos do sistema |
 
 ---
 
-## Componentes do Sistema
+## Sistema de Alertas e Vigilância
 
-### Fake Miner Engine
-- Gera hash rate fictício com variação realista
-- Gera lucro estimado fictício acumulado por sessão
-- Simula metas diárias com progressão percentual
-- Simula consumo de energia em watts
-- Estado alternável via toggle no app ou comando do bot
+O sistema possui uma lógica de proteção que reage às temperaturas e carga do sistema:
+1. **NORMAL**: Operação padrão.
+2. **ALERTA_1/2**: Notificações via Telegram sobre aumento de temperatura.
+3. **VIGILANCIA**: O sistema entra em estado de monitoramento crítico.
+4. **ALERTA_3 / DESLIGADO**: O minerador é interrompido preventivamente para proteger o hardware.
 
-### Hardware Monitor
-Coleta métricas reais via OSHI a cada 5 segundos:
-- Temperatura CPU (simulada — ver Decisões Técnicas)
-- Uso percentual de CPU
-- Frequência média dos núcleos em GHz
-- Uso de RAM em GB e percentual
-- Swap utilizado
-- Uptime do sistema operacional
-
-### Sistema de Alertas Inteligente
-Limites configurados:
-- Temperatura acima de 85°C
-- CPU acima de 90%
-- RAM acima de 85%
-
-Fluxo de alertas baseado em máquina de estados:
-
-```
-NORMAL → ALERTA_1 → VIGILANCIA → ALERTA_2 → ALERTA_3 → DESLIGADO
-```
-
-- **ALERTA_1** — resumo completo com opções `/vigilancia` e `/desligar`
-- **VIGILANCIA** — atualização a cada 5 coletas (25 segundos)
-- **ALERTA_2** — status de hardware com opções `/vigilancia` e `/desligar`
-- **ALERTA_3** — aviso crítico, apenas opção `/desligar`
-- **Retorno ao NORMAL** — notificação automática quando métricas normalizam
-
-### Telegram Bot
-Comandos disponíveis:
-- `/status` — estado completo do sistema
-- `/temps` — temperatura e uso de CPU
-- `/vigilancia` — ativa modo de vigilância constante
-- `/desligar` — desliga o minerador com segurança
-
-Resumo automático a cada 1 hora com minerador, lucro, meta e status da máquina.
-
-### Frontend Mobile (Flutter)
-Três telas com bottom navigation:
-- **Dashboard** — gráfico de linha do hash rate em tempo real + cards de temperatura e CPU
-- **Minerador** — status com toggle liga/desliga, lucro acumulado, meta e progress bar
-- **Alertas** — histórico de eventos (em desenvolvimento)
-
-Atualização automática a cada 5 segundos via polling na API REST.
-Toggle do minerador chama `POST /minerador/alternar` e reflete imediatamente na UI.
+Comandos disponíveis via Telegram:
+- `/status` — Resumo atual das métricas.
+- `/temps` — Apenas temperaturas de hardware.
+- `/vigilancia` — Ativa o modo de vigilância forçada.
+- `/desligar` — Comando remoto para parar a mineração.
 
 ---
 
-## Estrutura de Pacotes — Backend
+## Como Executar
 
-```
-fake_miner/
-├── bot/          # FakeMinerBot — comandos do Telegram
-├── config/       # OshiConfig, TelegramConfig
-├── controller/   # MetricasController — endpoints REST
-├── model/        # MetricasHardware, StatusMineracao, EstadoAlerta
-├── scheduler/    # ColetorMetricasTask, ResumoProgramadoTask
-└── service/      # MonitoramentoHardwareService, MotorMineracaoService,
-                  # AlertaService, TelegramNotificacaoService
-```
-
-## Estrutura de Pacotes — Frontend Mobile
-
-```
-lib/
-├── bloc/         # MineradorBloc, MineradorEvent, MineradorState
-├── core/         # ApiService
-├── models/       # MineradorStateModel
-├── screens/      # DashboardScreen, MineradorScreen, AlertasScreen
-└── widgets/      # HashChart, MetricCard
-```
+1. **Pré-requisitos**: JDK 24 instalado.
+2. **Configuração**:
+   - Crie um arquivo `.env` na raiz baseado no `.env.example`.
+   - Configure seu `BOT_TOKEN` e `CHAT_ID` do Telegram.
+3. **Build e Run**:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
 
 ---
 
-## Objetivos de Aprendizado
+## Observação Importante
 
-- Arquitetura orientada a eventos com Kafka
-- Cache e estado distribuído com Redis
-- Telemetria e observabilidade de sistemas
-- Integração assíncrona e mensageria
-- WebSocket e comunicação em tempo real
-- Design de microserviços
-- Watchdogs e sistemas fail-safe
-- Automação de infraestrutura
-- Bots de Telegram com lógica de negócio
-- Desenvolvimento mobile com Flutter e BLoC
-
----
-
-## Evoluções Futuras
-
-- Tela de Alertas no app mobile com histórico do backend
-- Frontend Web com Angular
-- WebSocket no lugar de polling no Flutter
-- Integração com Kafka para streaming de eventos
-- Redis para cooldown de alertas e cache de métricas
-- Monitoramento de múltiplas máquinas
-- Grafana + Prometheus
-- Autenticação JWT
-- Deploy com Docker / Kubernetes
-- IA simples para prever superaquecimento
-- Painel SaaS multiusuário
-
----
-
-## Observação importante
-
-Este projeto é **100% educacional**,
-focado em engenharia de software,
-observabilidade e automação de infraestrutura.
-Não tem relação com mineração ilegal ou exploração indevida de hardware.
-
----
-
-## Decisões Técnicas e Limitações Conhecidas
-
-### Temperatura da CPU — Simulada por limitação do Windows
-
-**Problema:** O OSHI tenta ler temperatura via WMI `MSAcpi_ThermalZoneTemperature`.
-Essa interface não está disponível em todas as placas-mãe no Windows, retornando `0.0`
-mesmo com o processo rodando como Administrador ou com o LibreHardwareMonitor ativo.
-
-**Tentativas realizadas:**
-- Rodar a aplicação como Administrador
-- Instalar e rodar o LibreHardwareMonitor como Administrador em background
-- Versões 0.9.5 e 0.9.6 do LibreHardwareMonitor testadas sem sucesso
-
-**Solução adotada:** Implementação de temperatura simulada em `MonitoramentoHardwareService`
-com base no uso real da CPU coletado pelo OSHI. A temperatura parte de uma base de 45°C,
-sobe proporcionalmente à carga da CPU até 85°C, com amortecimento gradual e variação
-de ±1°C para simular comportamento real de hardware. Os valores são clampados entre
-45°C e 95°C.
-
-**Impacto:** Nenhum. O sistema de alertas funciona normalmente sobre os valores simulados,
-que refletem o comportamento térmico real proporcional à carga da CPU.
+Este projeto é **100% educacional**. Trata-se de um simulador de mineração e monitoramento de hardware para fins de estudo.
+ Não há processamento real de criptomoedas ou ganho financeiro envolvido.
+ O objetivo é demonstrar competência técnica em Java, Spring Boot e integração de sistemas.
